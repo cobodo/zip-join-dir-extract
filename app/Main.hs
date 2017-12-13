@@ -53,7 +53,6 @@ extractFiles = do
             liftIO $ BS.appendFile (T.unpack path) (binaryFragment fragment)
             extractFiles
 
--- TODO: implement
 modifyPath :: T.Text -> Path Abs Dir -> ConduitResource FileFragmentData FileFragment
 modifyPath prefix dir = do
     maybeFragment <- C.await
