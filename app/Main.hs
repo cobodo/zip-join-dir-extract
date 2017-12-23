@@ -26,7 +26,7 @@ import System.IO
 
 import Lib
 
-type ConduitResource i o = C.Conduit i (ResourceT IO) o
+type ConduitResource m i o  = C.Conduit i (ResourceT m) o
 type ZipStream = Either ZipEntry BS.ByteString
 type FileNameBlob = BS.ByteString
 type FileDataBlob = BS.ByteString
@@ -42,7 +42,7 @@ data FileFragment = FileFragment
 
 separator = T.pack "__"
 
-extractFiles :: ConduitResource FileFragment Void
+extractFiles :: MonadIO m => ConduitResource m FileFragment Void
 extractFiles = do
     maybeFragment <- C.await
     case maybeFragment of
@@ -53,7 +53,7 @@ extractFiles = do
             liftIO $ BS.appendFile (T.unpack path) (binaryFragment fragment)
             extractFiles
 
-modifyPath :: T.Text -> Path Abs Dir -> ConduitResource FileFragmentData FileFragment
+modifyPath :: MonadIO m => T.Text -> Path Abs Dir -> ConduitResource m FileFragmentData FileFragment
 modifyPath prefix dir = do
     maybeFragment <- C.await
     case maybeFragment of
@@ -71,7 +71,7 @@ modifyPath prefix dir = do
                     C.yield $ FileFragment filePath fileData
                     modifyPath prefix dir
 
-zipToFiles' :: Maybe BS.ByteString -> ConduitResource ZipStream FileFragmentData
+zipToFiles' :: MonadIO m => Maybe BS.ByteString -> ConduitResource m ZipStream FileFragmentData
 zipToFiles' entryName = do
     --liftIO $ print entryName
     buf <- C.await
@@ -96,10 +96,10 @@ zipToFiles' entryName = do
                     C.yield $ FileFragmentData zen bs
                     zipToFiles' $ Just zen
 
-zipToFiles :: ConduitResource ZipStream FileFragmentData
+zipToFiles :: MonadIO m => ConduitResource m ZipStream FileFragmentData
 zipToFiles = zipToFiles' Nothing
 
-extractTo :: T.Text -> Path Abs Dir -> ConduitResource ZipStream Void
+extractTo :: MonadIO m => T.Text -> Path Abs Dir -> ConduitResource m ZipStream Void
 extractTo prefix dir = zipToFiles C..| modifyPath prefix dir C..| extractFiles
 
 runStream :: FilePath -> FilePath -> IO ()
@@ -118,7 +118,7 @@ main = do
     hSetEncoding stdout utf8
     args <- getArgs
     if length args < 2 then do
-        hPutStrLn stderr "Usage: unzip_join_prefix zipfile [zipfile2 [...]] target_dir"
+        hPutStrLn stderr "Usage: zip-join-dir-extract zipfile [zipfile2 [...]] target_dir"
         exitFailure
     else do
         let dir = last args
