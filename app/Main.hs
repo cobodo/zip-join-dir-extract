@@ -26,7 +26,7 @@ import System.IO
 
 import Lib
 
-type ConduitResource m i o  = C.Conduit i (ResourceT m) o
+type ConduitResource m i o  = C.ConduitT i o (ResourceT m) ()
 type ZipStream = Either ZipEntry BS.ByteString
 type FileNameBlob = BS.ByteString
 type FileDataBlob = BS.ByteString
