@@ -113,15 +113,24 @@ runStream dir path = do
     putStr "zip comment: "
     BSC.putStrLn $ zipComment info
 
+argsToPaths :: [FilePath] -> IO (FilePath, [FilePath])
+argsToPaths args = do
+    pwd <- getCurrentDirectory
+    let hasTargetDir = not $ T.isSuffixOf (T.pack ".zip") $ T.pack $ head args
+    head_path <- parseAnyFile pwd $ head args
+    let target_dir = if hasTargetDir then head args else toFilePath $ parent $ head_path
+    let files = if hasTargetDir then tail args else args
+    return (target_dir, files)
+
 main :: IO ()
 main = do
     hSetEncoding stdout utf8
     args <- getArgs
-    if length args < 2 then do
-        hPutStrLn stderr "Usage: zip-join-dir-extract zipfile [zipfile2 [...]] target_dir"
+    if length args < 1 then do
+        hPutStrLn stderr "Usage: zip-join-dir-extract [target_dir] zipfile [zipfile2 [...]]"
+        hPutStrLn stderr "if target_dir is omitted, it will extract all files to the same directory of first zipfile."
         exitFailure
     else do
-        let dir = last args
-        let paths = reverse . tail . reverse $ args
+        (dir, paths) <- argsToPaths args
         mapM_ (runStream dir) paths
 
